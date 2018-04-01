@@ -12,8 +12,6 @@
 //#include <ESP8266HTTPClient.h>
 #include <PubSubClient.h>
 
-#include <WiFiManager.h>
-
 
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
@@ -63,10 +61,12 @@ const String mqtt_topic_root = "xxxxx/xxxxx";
 const String device_id = "1";
 
 
+
+// Runtime vars
+
 //FdIrRemoteEsp8266 irRemote(PIN_IR);
 
 ESP8266WiFiMulti WiFiMulti;
-WiFiManager wifiManager;
 
 WiFiClient espClient;
 PubSubClient pubsubClient(espClient);
@@ -104,28 +104,18 @@ void wifi_setup() {
     WiFiMulti.addAP(ssid, password);
     while (WiFiMulti.run() != WL_CONNECTED) {
       debug(".");
-      delay(500);
+      digitalWrite(PIN_LED_STAT1, HIGH); // LED_STAT1 OFF
+      delay(100);
+      digitalWrite(PIN_LED_STAT1, LOW); // LED_STAT1 ON
+      delay(400);
     }
     debug("Done.");
     
   #else
     
-    debug("Connecting via wifiManager");
-    
-    // We start by connecting to a WiFi network
-    wifiManager.setTimeout(300);  // Time out after 5 mins.
-    if (!wifiManager.autoConnect()) {
-      debug("Wifi failed to connect and hit timeout.");
-      delay(3000);
-      // Reboot. A.k.a. "Have you tried turning it Off and On again?"
-      ESP.reset();
-      delay(5000);
-    }
-
-    //debug("WiFi connected. IP address: " + WiFi.localIP());
+    debug("TODO add wifi manager");
     
   #endif
-  
   
 }
 
@@ -149,7 +139,7 @@ void setup() {
   pinMode(PIN_IR, OUTPUT);
   pinMode(PIN_RF, OUTPUT);
   
-  digitalWrite(PIN_LED_STAT1, HIGH); // LED_STAT1 OFF
+  digitalWrite(PIN_LED_STAT1, LOW); // LED_STAT1 ON
 
   
   #ifdef DEBUG_SERIAL
@@ -163,6 +153,8 @@ void setup() {
   
   rcSwitch.enableTransmit(PIN_RF);
   randomSeed(micros());
+  
+  digitalWrite(PIN_LED_STAT1, HIGH); // LED_STAT1 OFF
   
 }
 
@@ -454,11 +446,11 @@ void sendRfByString(char* command) {
 //  sPrintln(".");
 
   if (bits.equals("") || data.equals("")) { return; } // Require bits and data.
+  rcSwitch.setRepeatTransmit(5);
   rcSwitch.send(atol(data.c_str()), atoi(bits.c_str()));
-  rcSwitch.send(atol(data.c_str()), atoi(bits.c_str()));
-  rcSwitch.send(atol(data.c_str()), atoi(bits.c_str()));  // Repeated to help ensure signal delivery.
-  
-  //rcSwitch.send(1397077, 24);
+
+//  rcSwitch.send(1397077, 24);
+
 }
 
 
@@ -496,7 +488,8 @@ void loop() {
     if (hasChanged_motion()) { mqtt_publish("motion", getReadingValue_motion()); }
     if (hasChanged_temp()) { mqtt_publish("temp", getReadingValue_temp()); }
     if (hasChanged_light()) { mqtt_publish("light", getReadingValue_light()); }
-    
+
+  
 //    ++value;
 //    snprintf (msg, 75, "hello world #%ld", value);
 //    sPrint("Publish message: ");
