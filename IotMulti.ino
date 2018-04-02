@@ -344,8 +344,26 @@ int lastReading_light = 0;
 int readLight() {
   lastReading_light = reading_light;
   
-  // TODO send pulse, time response.
-  return reading_light = digitalRead(PIN_LIGHT);
+  // send pulse, time response.
+  pinMode(PIN_LIGHT, OUTPUT);
+  digitalWrite(PIN_LIGHT, HIGH);
+  delay(5);
+  pinMode(PIN_LIGHT, INPUT);
+
+  int counter = 0;
+  while(digitalRead(PIN_LIGHT)) {
+    counter++;
+    if (counter > 99999) {
+      break;
+    }
+  }
+  int percent = 100 - (counter/1000);
+
+  // reduce resolution so it doesn't constantly spam mqtt
+  percent = percent/5;
+  percent = percent*5;
+  
+  return reading_light = percent;
 }
 int hasChanged_light() {
   return (reading_light != lastReading_light);  // TODO apply percentage threshold.
